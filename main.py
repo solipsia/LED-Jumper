@@ -15,8 +15,22 @@ GPIO.setmode(GPIO.BCM)
 switchpin=17
 GPIO.setup(switchpin, GPIO.IN, pull_up_down=GPIO.PUD_UP) 
 
-mode_snow=0;mode_rainbow=1;mode_pong=2;mode_ball=3;mode_snake=4;mode_pic=5;mode_text=6;mode_blank=7
-modes=8
+mode_snow=[0,10] # unqiie mode number and duration in seconds
+mode_rainbow=[1,15]
+mode_pong=[2,15]
+mode_ball=[3,15]
+mode_snake=[4,25]
+mode_xmas=[5,15]
+mode_text=[6,11]
+mode_blank=[7,0]
+modecycle=[]
+modecycle.append([mode_xmas,mode_text,mode_snow]) # Cycle 1
+modecycle.append([mode_pong,mode_snake]) # Cycle 2
+modecycle.append([mode_blank]) # Cycle 3
+modecurrentcycle=0
+modeindex=0
+modetimer=time.perf_counter() # stopwatch timing how long a mode has been running
+#modes=8
 numx=16;numy=16
 num_pixels = numx*numy
 wallblock = -2; clearblock = -1; coinblock = -3 # block type for snake
@@ -25,23 +39,43 @@ plug_top=0;plug_right=1;plug_bottom=2;plug_left=3 # display orientation
 #config parameters
 display_brightness=0.1 # 0 to 1
 orientation=plug_left #0=plug top
-mode=mode_text #start mode
+mode=modecycle[modecurrentcycle][modeindex][0]  #start mode
+mode_duration=modecycle[modecurrentcycle][modeindex][1]  # seconds until auto switch modes
 pic_duration=7 #seconds per image 
+scroll_speed=0.08 # delay between text scrolls
+scroll_text=u"  Merry Xmas"
+
+auto_cycle_modes=True # if true, auto advance modes on a timer
 
 pixels = neopixel.NeoPixel(
     board.D18, num_pixels, brightness=display_brightness, auto_write=False, pixel_order=neopixel.GRB
 )
+def nextmode():
+    global mode,modes,modetimer,modeindex,mode_duration
+    modeindex=(modeindex+1)%len(modecycle[modecurrentcycle])
+    mode=modecycle[modecurrentcycle][modeindex][0] # unique mode id
+    mode_duration=modecycle[modecurrentcycle][modeindex][1] # duration of this mode
+    print("mode",mode,'modeindex:',modeindex,'modecurrentcycle:',modecurrentcycle,'mode_duration',mode_duration)
+    modetimer=time.perf_counter() # reset stopswatch for new mode
 
-def nextmode(channel): # switch modes
+def checktimefornextmode():
+    global modetimer,auto_cycle_modes
+    if auto_cycle_modes and time.perf_counter()-modetimer>mode_duration: # time for next mode
+        print('duration:',time.perf_counter()-modetimer)
+        modetimer=time.perf_counter() # reset timer
+        nextmode()
+        
+def buttonpressed(channel): # switch modes
     global mode
     global modes
+    global auto_cycle_modes,modecurrentcycle,modecycle
     time.sleep(0.2)# debounce, switch must be in for x seconds
-    if GPIO.input(switchpin)==0:
-        mode=(mode+1)%modes
-        print("next mode",mode)
+    if GPIO.input(switchpin)==0: # button pressed
+        modecurrentcycle=(modecurrentcycle+1)%len(modecycle)
+        nextmode()
 
 # interrupt on switch pin going low (default is high pullup)
-GPIO.add_event_detect(switchpin, GPIO.FALLING, callback=nextmode, bouncetime=300)   
+GPIO.add_event_detect(switchpin, GPIO.FALLING, callback=buttonpressed, bouncetime=300)   
 
 def setpixelRGB(x1,y1,c):
     if orientation==plug_top:
@@ -109,6 +143,7 @@ def rainbow_cycle():
         if mode!=1: 
             break
         pixels.show()
+    checktimefornextmode()
 
 def solvemaze(maze,start,coins):
     stepcounter=0
@@ -219,7 +254,8 @@ def snakemode():
     solution=[]
     gameover=False
 
-    while not gameover and mode==mode_snake:
+    while not gameover and mode==mode_snake[0]:
+        checktimefornextmode()
         maze = [[clearblock for x in range(numx)] for y in range(numy)] #generate blank maze with [y][x] based coordinates
         #imprint snake onto maze for routing
         for seg in snakebody:
@@ -280,7 +316,8 @@ def pong():
     pad1color=(255,0,0)
     pad2color=(0,0,255)
     
-    while mode==mode_pong:
+    while mode==mode_pong[0]:
+        checktimefornextmode()
         pixels.fill((0, 0, 0))
         x=x+xdir
         bounce=random.uniform(0.5, 2.0)
@@ -347,7 +384,8 @@ def bounceball():
     hue[1]=0.3
     hue[2]=0.7
     bounceloss=[random.uniform(0.5, 0.8) for i in range(balls)]
-    while mode==mode_ball:
+    while mode==mode_ball[0]:
+        checktimefornextmode()
         pixels.fill((0, 0, 0)) # clear screen
         for ball in range(balls):
             vy[ball]=vy[ball]-gravity
@@ -377,7 +415,8 @@ def snow():
     y = [(0) for i in range(balls)]
     vy = [0.0 for i in range(balls)]
     hue= [random.random() for i in range(balls)]
-    while mode==mode_snow:
+    while mode==mode_snow[0]:
+        checktimefornextmode()
         pixels.fill((0, 0, 0)) # clear screen
         for ball in range(balls):
             vy[ball]=gravity[ball]
@@ -407,7 +446,8 @@ def picmode():
     random.shuffle(imgs)
 
     index=0
-    while mode==mode_pic:
+    while mode==mode_xmas[0]:
+        checktimefornextmode()
         index=(index+1)%len(imgs)
         index2=(index+1)%len(imgs)
         alpha=0
@@ -420,11 +460,11 @@ def picmode():
                     setpixelRGB(x,y,(r,g,b))
             pixels.show()
             alpha+=0.05
-            if mode!=mode_pic:
+            if mode!=mode_xmas:
                 break
         for i in range(100):
             time.sleep(0.05)
-            if mode!=mode_pic:
+            if mode!=mode_xmas[0]:
                 break
 
 def picmodewithsnow():
@@ -457,7 +497,8 @@ def picmodewithsnow():
     index=0 # start with first image
     timer=time.perf_counter() # start timer
 
-    while mode==mode_pic:
+    while mode==mode_xmas[0]:
+        checktimefornextmode()
         if time.perf_counter()-timer>pic_duration: # time for next image
             index=(index+1)%len(imgs)
             timer=time.perf_counter() # reset stopwatch
@@ -476,18 +517,19 @@ def picmodewithsnow():
                 if r>0 and g>0 and b>0:
                     setpixelRGB(x1,y1,(r,g,b))
         pixels.show()
+        
 
 def textmode():
-    unicode_text = u"  Merry Xmas"
+    global scroll_text
     folder='/home/pi/leds/'
     font = ImageFont.truetype(folder+"16x16font.ttf", 16, encoding="unic")
-    text_width, text_height = font.getsize(unicode_text)
+    text_width, text_height = font.getsize(scroll_text)
     #print(text_width, text_height )
     canvas = Image.new('RGB', (max(numx,text_width)+numx, max(numy,text_height) ), "black")
     draw = ImageDraw.Draw(canvas)
-    draw.text((0,0), unicode_text, 'white', font)
+    draw.text((0,0), scroll_text, 'white', font)
     offset=0
-    while offset<text_width and mode==mode_text:
+    while offset<text_width and mode==mode_text[0]:
         offset+=1
         pixels.fill((0, 0, 0)) # clear screen
         for y1 in range(numy):
@@ -495,31 +537,29 @@ def textmode():
                 r, g, b = canvas.getpixel((x1+offset, y1))
                 setpixelRGB(x1,y1,(r,g,b))
         pixels.show()
-        time.sleep(0.1)
+        time.sleep(scroll_speed)
+        checktimefornextmode()
 
 def blankmode():
     pixels.fill((0, 0, 0)) # clear screen
     pixels.show()
 
 while True:
-    if mode==mode_snow: 
-        #snow()
-        mode+=1
-    elif mode==mode_rainbow:
-    #    rainbow_cycle()
-        mode+=1
-    elif mode==mode_pong:
+    if mode==mode_snow[0]: 
+        snow()
+    elif mode==mode_rainbow[0]:
+        rainbow_cycle()
+    elif mode==mode_pong[0]:
         pong()
-    elif mode==mode_ball:
-    #    bounceball()
-        mode+=1
-    elif mode==mode_snake:
+    elif mode==mode_ball[0]:
+        bounceball()
+    elif mode==mode_snake[0]:
         snakemode()
-    elif mode==mode_pic:
+    elif mode==mode_xmas[0]:
         picmodewithsnow()
-    elif mode==mode_text:
+    elif mode==mode_text[0]:
         textmode()
-    elif mode==mode_blank:
+    elif mode==mode_blank[0]:
         blankmode()
      
 
