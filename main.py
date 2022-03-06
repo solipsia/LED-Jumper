@@ -1,17 +1,16 @@
 from cmath import pi
 import board
 import neopixel
+# sudo pip3 install rpi_ws281x
+# sudo pip3 install adafruit-circuitpython-neopixel 
 import time
 import random
 import colorsys
 import copy
 from PIL import Image #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
  
-# sudo pip3 install rpi_ws281x
-# sudo pip3 install adafruit-circuitpython-neopixel 
-
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-# Physical pin 11 = GPIO 0 = BCM 17
+# Raspberry PI Physical pin 11 = GPIO 0 = BCM 17
 GPIO.setmode(GPIO.BCM)
 switchpin=17
 GPIO.setup(switchpin, GPIO.IN, pull_up_down=GPIO.PUD_UP) 
@@ -48,6 +47,7 @@ def nextmode(channel): # switch modes
     if GPIO.input(switchpin)==0:
         mode=(mode+1)%modes
         print("next mode",mode)
+        
 # interrupt on switch pin going low (default is high pullup)
 GPIO.add_event_detect(switchpin, GPIO.FALLING, callback=nextmode, bouncetime=300)   
 
