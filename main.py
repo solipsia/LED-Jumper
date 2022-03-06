@@ -241,14 +241,13 @@ def snakemode():
         #copy solution to pixel display:
         for x in range(numx):
             for y in range(numy):
-                if solution and [y,x] in solution:
-                    p=1
+                #if solution and [y,x] in solution:
+                    #p=1
                     #setpixelRGB(x,y,(255,0,0)) # draw solution path
+                if maze[y][x] == wallblock:
+                    setpixelRGB(x,y,(255,255,255)) #wall block
                 else:
-                    if maze[y][x] == wallblock:
-                        setpixelRGB(x,y,(255,255,255)) #wall block
-                    else:
-                        setpixelRGB(x,y,(0,0,0)) #clear block
+                    setpixelRGB(x,y,(0,0,0)) #clear block
         # show coins
         for coin in coins:
             setpixelRGB(coin[1],coin[0],(255,0,0)) #coin block
@@ -504,7 +503,8 @@ def blankmode():
 
 while True:
     if mode==mode_snow: 
-        snow()
+        #snow()
+        mode+=1
     elif mode==mode_rainbow:
     #    rainbow_cycle()
         mode+=1
