@@ -31,7 +31,7 @@ wallblock = -2 #block type for snake
 clearblock = -1 #block type
 coinblock = -3 # block type
 
-plug_top=0
+plug_top=0 
 plug_right=1
 plug_bottom=2
 plug_left=3
