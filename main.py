@@ -15,29 +15,21 @@ GPIO.setmode(GPIO.BCM)
 switchpin=17
 GPIO.setup(switchpin, GPIO.IN, pull_up_down=GPIO.PUD_UP) 
 
-mode_snow=0
-mode_rainbow=1
-mode_pong=2
-mode_ball=3
-mode_snake=4
-mode_pic=5
-mode=5
+mode_snow=0;mode_rainbow=1;mode_pong=2;mode_ball=3;mode_snake=4;mode_pic=5
 modes=6
-numx=16
-numy=16
-num_pixels = 16*16
-wallblock = -2 #block type for snake
-clearblock = -1 #block type
-coinblock = -3 # block type
+numx=16;numy=16
+num_pixels = numx*numy
+wallblock = -2; clearblock = -1; coinblock = -3 # block type for snake
+plug_top=0;plug_right=1;plug_bottom=2;plug_left=3 # display orientation
 
-plug_top=0 
-plug_right=1
-plug_bottom=2
-plug_left=3
+#config parameters
+display_brightness=0.1 # 0 to 1
 orientation=plug_left #0=plug top
+mode=mode_pic #start mode
+pic_duration=7 #seconds per image 
 
 pixels = neopixel.NeoPixel(
-    board.D18, num_pixels, brightness=0.1, auto_write=False, pixel_order=neopixel.GRB
+    board.D18, num_pixels, brightness=display_brightness, auto_write=False, pixel_order=neopixel.GRB
 )
 
 def nextmode(channel): # switch modes
@@ -47,7 +39,7 @@ def nextmode(channel): # switch modes
     if GPIO.input(switchpin)==0:
         mode=(mode+1)%modes
         print("next mode",mode)
-        
+
 # interrupt on switch pin going low (default is high pullup)
 GPIO.add_event_detect(switchpin, GPIO.FALLING, callback=nextmode, bouncetime=300)   
 
@@ -464,11 +456,10 @@ def picmodewithsnow():
     #rgb_im = img.convert('RGB')
     random.shuffle(imgs)
     index=0 # start with first image
-    duration=5#seconds per image
     timer=time.perf_counter() # start timer
 
     while mode==mode_pic:
-        if time.perf_counter()-timer>duration: # time for next image
+        if time.perf_counter()-timer>pic_duration: # time for next image
             index=(index+1)%len(imgs)
             timer=time.perf_counter() # reset stopwatch
 
