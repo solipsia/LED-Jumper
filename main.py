@@ -7,16 +7,16 @@ import time
 import random
 import colorsys
 import copy
-from PIL import Image #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+from PIL import Image,ImageDraw,ImageFont #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
 
 # Switch: Raspberry PI Physical pin 11 = GPIO 0 = BCM 17
 GPIO.setmode(GPIO.BCM)
 switchpin=17
 GPIO.setup(switchpin, GPIO.IN, pull_up_down=GPIO.PUD_UP) 
 
-mode_snow=0;mode_rainbow=1;mode_pong=2;mode_ball=3;mode_snake=4;mode_pic=5
-modes=6
+mode_snow=0;mode_rainbow=1;mode_pong=2;mode_ball=3;mode_snake=4;mode_pic=5;mode_text=6;mode_blank=7
+modes=8
 numx=16;numy=16
 num_pixels = numx*numy
 wallblock = -2; clearblock = -1; coinblock = -3 # block type for snake
@@ -25,7 +25,7 @@ plug_top=0;plug_right=1;plug_bottom=2;plug_left=3 # display orientation
 #config parameters
 display_brightness=0.1 # 0 to 1
 orientation=plug_left #0=plug top
-mode=mode_pic #start mode
+mode=mode_text #start mode
 pic_duration=7 #seconds per image 
 
 pixels = neopixel.NeoPixel(
@@ -478,6 +478,30 @@ def picmodewithsnow():
                     setpixelRGB(x1,y1,(r,g,b))
         pixels.show()
 
+def textmode():
+    unicode_text = u"  Merry Xmas"
+    folder='/home/pi/leds/'
+    font = ImageFont.truetype(folder+"16x16font.ttf", 16, encoding="unic")
+    text_width, text_height = font.getsize(unicode_text)
+    #print(text_width, text_height )
+    canvas = Image.new('RGB', (max(numx,text_width)+numx, max(numy,text_height) ), "black")
+    draw = ImageDraw.Draw(canvas)
+    draw.text((0,0), unicode_text, 'white', font)
+    offset=0
+    while offset<text_width and mode==mode_text:
+        offset+=1
+        pixels.fill((0, 0, 0)) # clear screen
+        for y1 in range(numy):
+            for x1 in range(numx):
+                r, g, b = canvas.getpixel((x1+offset, y1))
+                setpixelRGB(x1,y1,(r,g,b))
+        pixels.show()
+        time.sleep(0.1)
+
+def blankmode():
+    pixels.fill((0, 0, 0)) # clear screen
+    pixels.show()
+
 while True:
     if mode==mode_snow: 
         snow()
@@ -493,6 +517,10 @@ while True:
         snakemode()
     elif mode==mode_pic:
         picmodewithsnow()
+    elif mode==mode_text:
+        textmode()
+    elif mode==mode_blank:
+        blankmode()
      
 
 

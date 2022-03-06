@@ -8,7 +8,8 @@ from turtle import clear
 # sudo pip3 install rpi_ws281x
 # sudo pip3 install adafruit-circuitpython-neopixel 
 
-from PIL import Image #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
+from PIL import Image,ImageDraw,ImageFont #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
+
 
 orientation=0 #0=plug top
 mode=5
@@ -434,21 +435,26 @@ def picmodewithsnow():
         pixelsshow()
 
   
-
+def textmode():
+    unicode_text = u"  Merry Xmas"
+    font = ImageFont.truetype("16x16font.ttf", 16, encoding="unic")
+    text_width, text_height = font.getsize(unicode_text)
+    #print(text_width, text_height )
+    canvas = Image.new('RGB', (max(numx,text_width)+numx, max(numy,text_height) ), "black")
+    draw = ImageDraw.Draw(canvas)
+    draw.text((0,0), unicode_text, 'white', font)
+    offset=0
+    while offset<text_width:
+        offset+=1
+        pixelsfill((0, 0, 0)) # clear screen
+        for y1 in range(numy):
+            for x1 in range(numx):
+                r, g, b = canvas.getpixel((x1+offset, y1))
+                setpixelRGB(x1,y1,(r,g,b))
+        pixelsshow()
+        time.sleep(0.1)
 
 while True:
-    if mode==0: 
-        snow()
-    elif mode==1:
-        rainbow_cycle()
-    elif mode==2:
-        pong()
-    elif mode==3:
-        bounceball()
-    elif mode==4:
-        snakemode()
-    elif mode==mode_pic:
-        picmodewithsnow()
-        exit()
+    textmode()
 
 
