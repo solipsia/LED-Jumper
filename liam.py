@@ -18,3 +18,4 @@ pixels = neopixel.NeoPixel(
 
 pixels.fill((255,255,0))
 pixels.show()
+ 

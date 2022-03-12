@@ -24,21 +24,20 @@ mode_xmas=[5,15]
 mode_text=[6,11]
 mode_blank=[7,0]
 modecycle=[]
-modecycle.append([mode_xmas,mode_text,mode_snow]) # Cycle 1
+modecycle.append([mode_text,mode_snow,mode_xmas]) # Cycle 1
 modecycle.append([mode_pong,mode_snake]) # Cycle 2
 modecycle.append([mode_blank]) # Cycle 3
 modecurrentcycle=0
 modeindex=0
 modetimer=time.perf_counter() # stopwatch timing how long a mode has been running
-#modes=8
 numx=16;numy=16
 num_pixels = numx*numy
 wallblock = -2; clearblock = -1; coinblock = -3 # block type for snake
 plug_top=0;plug_right=1;plug_bottom=2;plug_left=3 # display orientation
 
-#config parameters
+#config parameters---------------------------------------------------
 display_brightness=0.1 # 0 to 1
-orientation=plug_left #0=plug top
+orientation=plug_bottom #0=plug top
 mode=modecycle[modecurrentcycle][modeindex][0]  #start mode
 mode_duration=modecycle[modecurrentcycle][modeindex][1]  # seconds until auto switch modes
 pic_duration=7 #seconds per image 
@@ -423,7 +422,7 @@ def snow():
             y[ball]+=vy[ball]
             if y[ball]>numy-1: 
                 y[ball]=0
-            setpixelHSV(int(round(x[ball],0)),int(round(y[ball],0)),hue[ball],0.1,1)#draw ball
+            setpixelHSV(int(round(x[ball],0)),int(round(y[ball],0)),hue[ball],0.2,1)#draw ball
         pixels.show()
 
 def picmode():
@@ -467,7 +466,7 @@ def picmode():
             if mode!=mode_xmas[0]:
                 break
 
-def picmodewithsnow():
+def xmas():
     balls=numx
     gravity=[random.uniform(0.005, 0.08) for i in range(balls)]
     x = [i for i in range(balls)]
@@ -509,7 +508,7 @@ def picmodewithsnow():
             y[ball]+=vy[ball]
             if y[ball]>numy-1: 
                 y[ball]=0
-            setpixelHSV(int(round(x[ball],0)),int(round(y[ball],0)),hue[ball],0.1,0.5)#draw ball
+            setpixelHSV(int(round(x[ball],0)),int(round(y[ball],0)),hue[ball],0.2,0.5)#draw ball
         for y1 in range(16):
             for x1 in range(16):
                 #r, g, b = imgs[index].getpixel((x, y))
@@ -556,7 +555,7 @@ while True:
     elif mode==mode_snake[0]:
         snakemode()
     elif mode==mode_xmas[0]:
-        picmodewithsnow()
+        xmas()
     elif mode==mode_text[0]:
         textmode()
     elif mode==mode_blank[0]:
