@@ -455,6 +455,7 @@ def textmode():
         time.sleep(0.1)
 
 while True:
-    textmode()
+    mode=2
+    pong()
 
 
