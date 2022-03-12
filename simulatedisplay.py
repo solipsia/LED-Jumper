@@ -456,6 +456,6 @@ def textmode():
 
 while True:
     mode=2
-    pong()
+    snakemode()
 
 
