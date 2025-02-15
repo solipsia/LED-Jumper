@@ -1,0 +1,43 @@
+import random
+
+def generate_maze(width, height):
+    # Create a grid filled with walls
+    maze = [['#'] * (2 * width + 1) for _ in range(2 * height + 1)]
+
+    def carve(x, y):
+        # Carve a path at the given coordinates
+        maze[y][x] = ' '
+
+        # Randomly shuffle the directions
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        random.shuffle(directions)
+
+        for dx, dy in directions:
+            nx, ny = x + 2 * dx, y + 2 * dy
+            if 0 <= nx < 2 * width + 1 and 0 <= ny < 2 * height + 1 and maze[ny][nx] == '#':
+                mx, my = x + dx, y + dy
+                maze[my][mx] = ' '
+                carve(nx, ny)
+
+    # Carve the maze starting from the center
+    carve(1, 1)
+
+    # Fill the outer borders with walls
+    for i in range(2 * width + 1):
+        maze[0][i] = '#'
+        maze[2 * height][i] = '#'
+    for j in range(2 * height + 1):
+        maze[j][0] = '#'
+        maze[j][2 * width] = '#'
+
+    return maze
+
+def print_maze(maze):
+    for row in maze:
+        print(''.join(row))
+
+# Generate a 16x16 maze
+maze = generate_maze(16, 16)
+
+# Print the maze
+print_maze(maze)

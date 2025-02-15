@@ -7,6 +7,9 @@ import copy
 from turtle import clear
 # sudo pip3 install rpi_ws281x
 # sudo pip3 install adafruit-circuitpython-neopixel 
+import numpy as np
+import matplotlib.pyplot as plt
+import math
 
 from PIL import Image,ImageDraw,ImageFont #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
 
@@ -45,7 +48,11 @@ def pixelsshow():
                 r=pixels[(y)*numx+x][0]
                 g=pixels[(y)*numx+x][1]
                 b=pixels[(y)*numx+x][2]
-            print(f'\x1b[38;2;{r};{g};{b}m# \x1b[0m',end='') # print # char in RGB
+            if r==0 and g==0 and b==0:
+            #print(f'\x1b[38;2;{r};{g};{b}m# \x1b[0m',end='') # print # char in RGB
+                print(f'\x1b[31m  \x1b[0m',end='') # print # char in RGB
+            else:
+                print(f'\x1b[38;2;{r};{g};{b}m# \x1b[0m',end='') # print # char in RGB
         print('') # new line
     for y in range(numy):
         print(f'\033[A',end='') # move cursor to top
@@ -454,8 +461,103 @@ def textmode():
         pixelsshow()
         time.sleep(0.1)
 
+# Define rotation matrices
+def rotation_matrix_x(angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+
+def rotation_matrix_y(angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+def rotation_matrix_z(angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+def rotate_cube(cube, anglex, angley, anglez):
+    output=np.dot(cube, rotation_matrix_x(anglex))
+    output=np.dot(output, rotation_matrix_y(angley))
+    output=np.dot(output, rotation_matrix_z(anglez))
+    return output
+    if axis == 'x':
+        return np.dot(cube, rotation_matrix_x(angle))
+    elif axis == 'y':
+        return np.dot(cube, rotation_matrix_y(angle))
+    elif axis == 'z':
+        return np.dot(cube, rotation_matrix_z(angle))
+    else:
+        raise ValueError("Invalid rotation axis. Choose from 'x', 'y', or 'z'.")
+
+def project_2d(points, focal_length=1):
+    points[points[:, 2] == 0, 2] = 1e-6
+    return points[:, :2] / (points[:, 2:3]+10)* focal_length
+
+def draw_line(x1, y1, x2, y2, col):
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    x, y = x1, y1
+    sx = -1 if x1 > x2 else 1
+    sy = -1 if y1 > y2 else 1
+
+    if dx > dy:
+        err = dx / 2.0
+        while x != x2:
+            setpixelRGB(x,y,col)
+            err -= dy
+            if err < 0:
+                y += sy
+                err += dx
+            x += sx
+    else:
+        err = dy / 2.0
+        while y != y2:
+            setpixelRGB(x,y,col)
+            err -= dx
+            if err < 0:
+                x += sx
+                err += dy
+            y += sy
+    setpixelRGB(x,y,col)
+
+def cube():
+    vertices = np.array([
+        [-1, -1, -1],   #left bottom    front   0 
+        [-1, -1, 1],    #left bottom    back    1
+        [-1, 1, -1],    #left top       front   2
+        [-1, 1, 1],     #left top       back    3
+        [1, -1, -1],    #right bottom   front   4
+        [1, -1, 1],     #right bottom   back    5
+        [1, 1, -1],     #right top      front   6
+        [1, 1, 1]       #right top      back    7
+    ])
+    edges = [[0, 4], [4,6], [6,2], [2,0], [1,5], [5,7], [7,3], [3,1], [1,0], [3,2], [7,6], [5,4]]
+    while mode==3:
+        anglex = np.pi / 64
+        angley = np.pi / 128 
+        axis = 'y'  # rotate around y-axis
+        #vertices = rotate_cube(vertices, angle, axis)
+        vertices = rotate_cube(vertices, anglex, angley, 0)
+        points_2d = project_2d(vertices)
+        scaleup=35
+        translate=7
+        points_2d_scaled = [[round(i*scaleup+translate) for i in pnt] for pnt in points_2d]
+        #print(points_2d_scaled)
+        pixelsfill((0, 0, 0)) # clear screen
+        
+        for edge in edges:
+            draw_line(points_2d_scaled[edge[0]][0],points_2d_scaled[edge[0]][1],points_2d_scaled[edge[1]][0],points_2d_scaled[edge[1]][1],(0,10,0))
+        
+        for pix in points_2d_scaled:
+            setpixelRGB(pix[0],pix[1],(255,0,0))
+        
+        pixelsshow()
+        time.sleep(0.1)
+        #print(points_2d_scaled)
+        #exit()
+
 while True:
-    mode=2
-    pong()
+    mode=3
+    #pong()
+    cube()
 
 

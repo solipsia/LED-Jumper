@@ -1,1 +1,1 @@
-sudo /usr/bin/python /home/pi/leds/main.py &
+sudo /usr/bin/python /home/pi/main.py &

@@ -1,21 +1,27 @@
-# GR 2022 LED Jumper
+#sudo pip3 install --break-system-packages adafruit-blinka && sudo pip install --upgrade Pillow --break-system-packages && sudo apt-get install libopenjp2-7 && sudo pip install matplotlib --break-system-packages
+
 from cmath import pi
-import board
+import board #sudo pip3 install --break-system-packages adafruit-blinka
 import neopixel
-# sudo pip3 install rpi_ws281x
-# sudo pip3 install adafruit-circuitpython-neopixel 
+## sudo pip3 install rpi_ws281x --break-system-packages
+## sudo pip3 install adafruit-circuitpython-neopixel --break-system-packages
 import time
 import random
 import colorsys
 import copy
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-from PIL import Image,ImageDraw,ImageFont #sudo python -m pip install --upgrade Pillow  ;; sudo apt-get install libopenjp2-7
+from PIL import Image,ImageDraw,ImageFont 
+import numpy as np  #sudo pip3 install numpy --break-system-packages && sudo apt-get install libatlas-base-dev
+
+#import #matplotlib.pyplot as plt #sudo pip install matplotlib
+import math
 
 # Switch: Raspberry PI Physical pin 11 = GPIO 0 = BCM 17
 GPIO.setmode(GPIO.BCM)
-switchpin=17
+switchpin=17#BCM17
 GPIO.setup(switchpin, GPIO.IN, pull_up_down=GPIO.PUD_UP) 
-
+ledpin=board.D18 #18 #phys pin 16 GPIO 23 = the only PWM pin00
+print(1)
 mode_snow=[0,10] # unqiie mode number and duration in seconds
 mode_rainbow=[1,15]
 mode_pong=[2,15]
@@ -24,10 +30,12 @@ mode_snake=[4,25]
 mode_xmas=[5,15]
 mode_text=[6,11]
 mode_blank=[7,0]
+mode_cube=[8,15]
 modecycle=[]
-modecycle.append([mode_text,mode_snow,mode_xmas]) # Cycle 1
-modecycle.append([mode_pong,mode_snake]) # Cycle 2
-modecycle.append([mode_blank]) # Cycle 3
+#modecycle.append([mode_text,mode_snow,mode_xmas]) # Cycle 1
+#modecycle.append([mode_text,mode_snow,mode_xmas,mode_pong,mode_snake]) # Cycle 1
+modecycle.append([mode_cube,mode_pong,mode_snake]) # Cycle 2
+#modecycle.append([mode_blank]) # Cycle 3
 modecurrentcycle=0
 modeindex=0
 modetimer=time.perf_counter() # stopwatch timing how long a mode has been running
@@ -41,14 +49,14 @@ display_brightness=0.1 # 0 to 1
 orientation=plug_bottom #0=plug top
 mode=modecycle[modecurrentcycle][modeindex][0]  #start mode
 mode_duration=modecycle[modecurrentcycle][modeindex][1]  # seconds until auto switch modes
-pic_duration=7 #seconds per image 
+pic_duration=17 #seconds per image 
 scroll_speed=0.08 # delay between text scrolls
 scroll_text=u"  Merry Xmas"
 
 auto_cycle_modes=True # if true, auto advance modes on a timer
 
 pixels = neopixel.NeoPixel(
-    board.D18, num_pixels, brightness=display_brightness, auto_write=False, pixel_order=neopixel.GRB
+    ledpin, num_pixels, brightness=display_brightness, auto_write=False, pixel_order=neopixel.GRB
 )
 def nextmode():
     global mode,modes,modetimer,modeindex,mode_duration
@@ -75,7 +83,25 @@ def buttonpressed(channel): # switch modes
         nextmode()
 
 # interrupt on switch pin going low (default is high pullup)
-GPIO.add_event_detect(switchpin, GPIO.FALLING, callback=buttonpressed, bouncetime=300)   
+#GPIO.add_event_detect(switchpin, GPIO.FALLING, callback=buttonpressed, bouncetime=300)   
+
+def getpixelRGB(x1,y1):
+    if orientation==plug_top:
+        x=x1
+        y=y1
+    if orientation==plug_right:
+        x=y1
+        y=x1
+    if orientation==plug_bottom:
+        x=numx-x1-1
+        y=numy-y1-1
+    if orientation==plug_left:
+        x=numy-y1-1
+        y=x1
+    if y%2==0:
+        return pixels[max(min(y+1,numy-1),0)*numx-max(min(x,numx-1),0)-1] 
+    else:
+        return pixels[(y)*numx+max(min(x,numy-1),0)]
 
 def setpixelRGB(x1,y1,c):
     if orientation==plug_top:
@@ -521,7 +547,7 @@ def xmas():
 
 def textmode():
     global scroll_text
-    folder='/home/pi/leds/'
+    folder='/home/pi/'
     font = ImageFont.truetype(folder+"16x16font.ttf", 16, encoding="unic")
     text_width, text_height = font.getsize(scroll_text)
     #print(text_width, text_height )
@@ -540,11 +566,133 @@ def textmode():
         time.sleep(scroll_speed)
         checktimefornextmode()
 
+def ave(lst):
+    return float(sum(lst)) / float(len(lst))
+
+# Define rotation matrices
+def rotation_matrix_x(angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+
+def rotation_matrix_y(angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+def rotation_matrix_z(angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+def rotate_cube(cube, anglex, angley, anglez):
+    output=np.dot(cube, rotation_matrix_x(anglex))
+    output=np.dot(output, rotation_matrix_y(angley))
+    output=np.dot(output, rotation_matrix_z(anglez))
+    return output
+    if axis == 'x':
+        return np.dot(cube, rotation_matrix_x(angle))
+    elif axis == 'y':
+        return np.dot(cube, rotation_matrix_y(angle))
+    elif axis == 'z':
+        return np.dot(cube, rotation_matrix_z(angle))
+    else:
+        raise ValueError("Invalid rotation axis. Choose from 'x', 'y', or 'z'.")
+
+def project_2d(points, focal_length=1):
+    points[points[:, 2] == 0, 2] = 1e-6
+    return points[:, :2] / (points[:, 2:3]+10)* focal_length
+
+def draw_line(x1, y1, x2, y2, col):
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    x, y = x1, y1
+    sx = -1 if x1 > x2 else 1
+    sy = -1 if y1 > y2 else 1
+
+    if dx > dy:
+        err = dx / 2.0
+        while x != x2:
+            if ave(getpixelRGB(x,y))<ave(col): #Only write pixel if brighter than what's there already
+                setpixelRGB(x,y,col)
+            err -= dy
+            if err < 0:
+                y += sy
+                err += dx
+            x += sx
+    else:
+        err = dy / 2.0
+        while y != y2:
+            if ave(getpixelRGB(x,y))<ave(col): #Only write pixel if brighter than what's there already
+                setpixelRGB(x,y,col)
+            err -= dx
+            if err < 0:
+                x += sx
+                err += dy
+            y += sy
+    #print(ave(getpixelRGB(x,y)),ave(col))
+    #print(x,y,col)
+    if ave(getpixelRGB(x,y))<ave(col): #Only write pixel if brighter than what's there already
+        setpixelRGB(x,y,col)
+
+def cube():
+    vertices = np.array([
+        [-1, -1, -1],   #left bottom    front   0 
+        [-1, -1, 1],    #left bottom    back    1
+        [-1, 1, -1],    #left top       front   2
+        [-1, 1, 1],     #left top       back    3
+        [1, -1, -1],    #right bottom   front   4
+        [1, -1, 1],     #right bottom   back    5
+        [1, 1, -1],     #right top      front   6
+        [1, 1, 1]       #right top      back    7
+    ])
+    edges = [[0, 4], [4,6], [6,2], [2,0], [1,5], [5,7], [7,3], [3,1], [1,0], [3,2], [7,6], [5,4]]
+    maxdepth=0
+    mindepth=9999
+    maxvertexbright=255
+    minvertexbright=10
+    maxedgebright=190
+    minedgebright=10
+    while mode==mode_cube[0]:
+        anglex = np.pi / 256 
+        angley = np.pi / 512
+        axis = 'y'  # rotate around y-axis
+        #vertices = rotate_cube(vertices, angle, axis)
+        vertices = rotate_cube(vertices, anglex, angley, 0)
+        points_2d = project_2d(vertices)
+        scaleup=40
+        translate=7
+        points_2d_scaled = [[round(i*scaleup+translate) for i in pnt] for pnt in points_2d]
+        #print(points_2d_scaled)
+        pixels.fill((0, 0, 0)) # clear screen
+        
+        for edge in edges:
+            depth1=vertices[edge[0]][2]
+            depth2=vertices[edge[1]][2]
+            depth=(depth1+depth2)/2.0
+            bright=(1-(depth-mindepth)/(maxdepth-mindepth))*(maxedgebright-minedgebright)+minedgebright
+            draw_line(points_2d_scaled[edge[0]][0],points_2d_scaled[edge[0]][1],points_2d_scaled[edge[1]][0],points_2d_scaled[edge[1]][1],(round(bright/3),round(bright/3),0))
+        
+        for i,pix in enumerate(points_2d_scaled):
+            depth=vertices[i][2]
+            maxdepth=max(maxdepth,depth)
+            mindepth=min(mindepth,depth)
+            #print((depth-mindepth)/(maxdepth-mindepth),pix[0],pix[1])
+            bright=(1-(depth-mindepth)/(maxdepth-mindepth))*(maxvertexbright-minvertexbright)+minvertexbright
+            #setpixelRGB(pix[0],pix[1],(round(bright),0,0)) 
+            #if ave(getpixelRGB(pix[0],pix[1]))<ave((round(bright),0,0)): #Only write pixel if brighter than what's there already
+            setpixelRGB(pix[0],pix[1],(round(bright),0,0))
+        
+        pixels.show()
+        #time.sleep(0.001)
+        checktimefornextmode()
+        #print(points_2d_scaled)
+        #exit()
+
 def blankmode():
     pixels.fill((0, 0, 0)) # clear screen
     pixels.show()
 
+print(2)
 while True:
+    print(mode)
     if mode==mode_snow[0]: 
         snow()
     elif mode==mode_rainbow[0]:
@@ -561,6 +709,8 @@ while True:
         textmode()
     elif mode==mode_blank[0]:
         blankmode()
+    elif mode==mode_cube[0]:
+        cube()
      
 
 
